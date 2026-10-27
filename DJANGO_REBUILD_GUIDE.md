@@ -8,6 +8,12 @@ The original MERN repo (`D:\Tech\edtech-full-new`) stays untouched. It is the sp
 you're unsure what an endpoint should do, read its Express version in
 [reference/server/](reference/server/), or run both backends and compare.
 
+Related docs:
+
+- [DJANGO_LEARNING_PATH.md](DJANGO_LEARNING_PATH.md): what to learn before, during and after
+  this rebuild, and why Django comes before FastAPI
+- [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md): SQL exercises to do after each build step
+
 1. [Repo layout](#1-repo-layout)
 2. [Why rebuild the same app](#2-why-rebuild-the-same-app)
 3. [Stack: Express → Django](#3-stack-express--django)
@@ -24,7 +30,9 @@ you're unsure what an endpoint should do, read its Express version in
 
 ```
 edtech-full-python/
-├── DJANGO_REBUILD_GUIDE.md   ← this file
+├── DJANGO_REBUILD_GUIDE.md   ← this file: what to build
+├── DJANGO_LEARNING_PATH.md   ← what to learn, and in what order
+├── POSTGRES_PRACTICE.md      ← SQL exercises for each build step
 ├── frontend/                 ← React app, copied from the MERN repo
 │   └── .env                  ← VITE_BASE_URL=http://localhost:8000/api/v1
 ├── backend/                  ← the Django project (you create it in step 1)
@@ -351,6 +359,9 @@ Each one deserves a test.
 
 **Accounts**
 
+- Signup accepts only `Student` or `Instructor` as `accountType`. If it accepted `Admin` from
+  the client, anyone could make themselves an admin. See
+  [reference/server/utils/validateAuth.js](reference/server/utils/validateAuth.js).
 - Deletion is soft: `isDeleted = true` and `deletionScheduledAt = now + 3 days`. Logging in
   before then cancels it.
 - A nightly job at 01:00 hard-deletes accounts that are due and writes a `UserDeletionLog`
@@ -474,7 +485,8 @@ Each one deserves a test.
 
 ## 9. Build order
 
-Each step leaves something working you can click through in the frontend.
+Each step leaves something working you can click through in the frontend. After each step, do
+the matching exercises in [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md).
 
 | # | Step | Endpoints | Done when | You learn |
 |---|---|---|---|---|
@@ -496,4 +508,6 @@ bugs the Express version already hit.
 **Stretch goal.** Write a management command that imports the real data from MongoDB
 (`mongoexport` JSON → Postgres), mapping ObjectIds to UUIDs and the two-sided arrays to
 `Enrollment` rows. It teaches `bulk_create` and data migration, the part of a real stack
-switch that tutorials skip.
+switch that tutorials skip. To learn the psycopg driver as well, write it as a plain script
+instead; [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md#psycopg-directly-the-data-import) shows
+how.
