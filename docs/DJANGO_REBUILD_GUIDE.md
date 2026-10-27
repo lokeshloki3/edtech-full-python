@@ -355,8 +355,8 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 |---|---|---|---|
 | POST | `/contact` | Public | Replies **200 even on failure**. The frontend reads `success`. |
 
-Express also serves `GET /`, which returns `{ success: true, message: "Your server is up and running." }`,
-and `GET /robots.txt`.
+Express also serves `GET /`, which returns `{ success: true, message: "Your server is up and running." }`.
+Don't give the API a `robots.txt`; see the robots rule in [section 7](#7-behaviour-to-carry-over).
 
 ---
 
@@ -465,8 +465,12 @@ Each one deserves a test.
 **Misc**
 
 - The contact form replies 200 even when it fails.
-- Every response carries `X-Robots-Tag: noindex, nofollow`, and `/robots.txt` disallows
-  everything. The API should never be indexed.
+- Every response carries `X-Robots-Tag: noindex, nofollow`, so API URLs never show up as search
+  results. Done in `core` by `RobotsTagMiddleware`.
+- **The API has no `robots.txt`.** Google renders the client-side catalog and course pages by
+  calling this API, and it obeys the API host's `robots.txt` while doing so. A `Disallow: /`
+  would leave those pages empty for Google. Whether the site itself is indexable is the
+  frontend's `VITE_STAGING`.
 
 ---
 
@@ -577,7 +581,7 @@ the matching exercises in [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md).
 | # | Step | Endpoints | Done when | You learn |
 |---|---|---|---|---|
 | 1 | Foundation | none | You can create a category, and a course with sections and subsections, in `/admin`, and see the rows in `psql` | Models, migrations, constraints, the admin |
-| 2 | Plumbing | `GET /`, `/robots.txt` | The envelope, error handler, cookie auth class, CORS, origin middleware and robots header are all in place | DRF settings, middleware |
+| 2 | Plumbing | `GET /` | The envelope, error handler, cookie auth class, CORS, origin middleware and robots header are all in place | DRF settings, middleware |
 | 3 | Public reads | `showAllCategories`, `getCategoryPageDetails`, `getAllCourses`, `getCourseDetails`, `getReviews`, `getAverageRating` | The home, catalog and course pages render from Postgres | Serializers, `select_related` / `prefetch_related`, `Avg` |
 | 4 | Auth | All of `/auth`, plus `getUserDetails` | Sign up with an OTP, log in, reload and stay logged in, log out. A 6th wrong password gets a 429. | The custom user, hashing, cookies, PyJWT, email, throttling |
 | 5 | Instructor | Course, section and subsection CRUD, `getInstructorCourses`, `getFullCourseDetails`, `deleteCourse`, `updateProfile`, `updateDisplayPicture`, `instructorDashboard` | You can build and publish a course in the UI, with a thumbnail and videos | Multipart, Cloudinary, permissions, `annotate` with `Count` and `F` |
