@@ -105,18 +105,18 @@ Skip whatever you already know. Main source: the official tutorial,
 These are small and real, and you'll reuse the results in the rebuild. Write each one as a plain
 Python module with pytest tests, before you touch Django.
 
-1. [reference/server/utils/secToDuration.js](reference/server/utils/secToDuration.js) becomes
+1. [reference/server/utils/secToDuration.js](../reference/server/utils/secToDuration.js) becomes
    `convert_seconds_to_duration(total_seconds: int) -> str`. Test it with
    `@pytest.mark.parametrize`: `0 → "0s"`, `61 → "1m 1s"`, `3600 → "1h 0m"`,
    `3725 → "1h 2m"`.
-2. [reference/server/utils/courseDuration.js](reference/server/utils/courseDuration.js) becomes
+2. [reference/server/utils/courseDuration.js](../reference/server/utils/courseDuration.js) becomes
    `calculate_total_duration(sections)`, which sums `timeDuration` across nested sections. Write
    it with nested loops first, then as a single `sum()` over a generator.
-3. [reference/server/utils/hashToken.js](reference/server/utils/hashToken.js) becomes
+3. [reference/server/utils/hashToken.js](../reference/server/utils/hashToken.js) becomes
    `hashlib.sha256(...).hexdigest()` plus `hmac.compare_digest`. Node's `timingSafeEqual`
    throws on a length mismatch, but Python's version just returns `False`, so you don't need
    the length guard.
-4. [reference/server/utils/validateAuth.js](reference/server/utils/validateAuth.js) becomes a
+4. [reference/server/utils/validateAuth.js](../reference/server/utils/validateAuth.js) becomes a
    set of validators that return `str | None`. Keep the rule that signup accepts only `Student`
    and `Instructor`. If a client could send `accountType: "Admin"`, anyone could make
    themselves an admin.
@@ -191,7 +191,7 @@ Roughly in order of how often companies expect them:
 5. **Observability.** Sentry for errors, plus structured logging.
 6. **A FastAPI service.** Build one of the AI features from the original plan (a quiz generator,
    or a study assistant over course content; see Phase 14 in
-   [reference/docs/PLATFORM_PLAN_COMPREHENSIVE.md](reference/docs/PLATFORM_PLAN_COMPREHENSIVE.md))
+   [reference/docs/PLATFORM_PLAN_COMPREHENSIVE.md](../reference/docs/PLATFORM_PLAN_COMPREHENSIVE.md))
    as its own small service, using FastAPI, Pydantic, SQLAlchemy 2.0 and Alembic. You'll learn
    async, dependency injection and an explicit ORM, which is the other half of the Python job
    market. Tutorials: <https://fastapi.tiangolo.com/tutorial/> and

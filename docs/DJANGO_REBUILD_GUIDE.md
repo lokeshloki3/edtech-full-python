@@ -6,7 +6,7 @@ unchanged.
 
 The original MERN repo (`D:\Tech\edtech-full-new`) stays untouched. It is the spec. When
 you're unsure what an endpoint should do, read its Express version in
-[reference/server/](reference/server/), or run both backends and compare.
+[reference/server/](../reference/server/), or run both backends and compare.
 
 Related docs:
 
@@ -30,9 +30,10 @@ Related docs:
 
 ```
 edtech-full-python/
-├── DJANGO_REBUILD_GUIDE.md   ← this file: what to build
-├── DJANGO_LEARNING_PATH.md   ← what to learn, and in what order
-├── POSTGRES_PRACTICE.md      ← SQL exercises for each build step
+├── docs/
+│   ├── DJANGO_REBUILD_GUIDE.md ← this file: what to build
+│   ├── DJANGO_LEARNING_PATH.md ← what to learn, and in what order
+│   └── POSTGRES_PRACTICE.md    ← SQL exercises for each build step
 ├── docker-compose.yml        ← Postgres for local development
 ├── .env.example              ← its credentials; copy to .env (gitignored)
 ├── frontend/                 ← React app, copied from the MERN repo
@@ -65,7 +66,7 @@ instead. Delete `reference/` once the port is done.
   fixed in PR #31 of the original repo (payment, auth, course access). Your Django version
   is done when it gets those right too.
 - **The frontend already exists.** It reads its API address from `VITE_BASE_URL`
-  ([frontend/src/lib/axiosClient.ts](frontend/src/lib/axiosClient.ts)), so you can test end
+  ([frontend/src/lib/axiosClient.ts](../frontend/src/lib/axiosClient.ts)), so you can test end
   to end from the first endpoint.
 - **The data model shows what Postgres does better.** The Mongoose models keep reference
   arrays on both sides of a relationship and sync them by hand. Translating them is most of
@@ -259,7 +260,7 @@ slash**. Match them exactly.
 `{ "success": false, "message": "..." }`, with a matching status code. The frontend checks
 `success` before reading `data`.
 
-The exact shape of every endpoint's response is in [frontend/src/types/](frontend/src/types/).
+The exact shape of every endpoint's response is in [frontend/src/types/](../frontend/src/types/).
 Shapes differ by endpoint. For example, `getAllCourses` returns a six-field projection, and
 most endpoints send `instructor` as an id rather than an object. Read the type before
 writing the serializer.
@@ -289,7 +290,7 @@ writing the serializer.
 Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 **Student / Instructor / Admin** (that `accountType` only).
 
-**`/api/v1/auth`**, from [reference/server/routes/User.js](reference/server/routes/User.js)
+**`/api/v1/auth`**, from [reference/server/routes/User.js](../reference/server/routes/User.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -301,7 +302,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | POST | `/reset-password-token` | Public | Emails a reset link. 3 per hour per IP + email. |
 | POST | `/reset-password` | Public | |
 
-**`/api/v1/profile`**, from [reference/server/routes/Profile.js](reference/server/routes/Profile.js)
+**`/api/v1/profile`**, from [reference/server/routes/Profile.js](../reference/server/routes/Profile.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -312,7 +313,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | GET | `/instructorDashboard` | Instructor | Per course: `totalStudentsEnrolled`, `totalAmountGenerated` (students × price) |
 | DELETE | `/deleteProfile` | Auth | Soft delete. Hard delete follows after 3 days. |
 
-**`/api/v1/course`**, from [reference/server/routes/Course.js](reference/server/routes/Course.js)
+**`/api/v1/course`**, from [reference/server/routes/Course.js](../reference/server/routes/Course.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -337,7 +338,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | GET | `/getAverageRating` | Public | |
 | GET | `/getReviews` | Public | Populates the author and the course name |
 
-**`/api/v1/payment`**, from [reference/server/routes/Payments.js](reference/server/routes/Payments.js)
+**`/api/v1/payment`**, from [reference/server/routes/Payments.js](../reference/server/routes/Payments.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -358,7 +359,7 @@ and `GET /robots.txt`.
 
 ## 6. Data model: Mongo → Postgres
 
-The originals are in [reference/server/models/](reference/server/models/).
+The originals are in [reference/server/models/](../reference/server/models/).
 
 ### Field types
 
@@ -412,7 +413,7 @@ let anyone enumerate `/courses/1`, `/courses/2` and so on.
 These are the rules the Express code enforces today. Several came from the PR #31 fixes.
 Each one deserves a test.
 
-**Session**, in [reference/server/config/authCookie.js](reference/server/config/authCookie.js)
+**Session**, in [reference/server/config/authCookie.js](../reference/server/config/authCookie.js)
 
 - The cookie is named `token`: httpOnly, path `/`, lasting 2 hours. In dev: `SameSite=Lax`,
   not secure. In production: `SameSite=None; Secure`, because the frontend and the API are
@@ -427,12 +428,12 @@ Each one deserves a test.
 
 - The OTP is stored hashed, never in plaintext. It expires after 5 minutes. After 5 wrong
   attempts the user must request a new one. See
-  [reference/server/models/OTP.js](reference/server/models/OTP.js).
+  [reference/server/models/OTP.js](../reference/server/models/OTP.js).
 - Only the SHA-256 hash of the reset token is stored on the user, and it expires after 5
-  minutes. See [reference/server/controllers/ResetPassword.js](reference/server/controllers/ResetPassword.js).
+  minutes. See [reference/server/controllers/ResetPassword.js](../reference/server/controllers/ResetPassword.js).
 - Emails are trimmed and lowercased everywhere, and `User.email` is unique.
 
-**Rate limits**, in [reference/server/middlewares/rateLimit.js](reference/server/middlewares/rateLimit.js)
+**Rate limits**, in [reference/server/middlewares/rateLimit.js](../reference/server/middlewares/rateLimit.js)
 
 - Login allows 5 failed attempts per 15 minutes per IP. Successful logins don't count.
 - `sendotp` and `reset-password-token` allow 3 per hour, keyed on IP + target email.
@@ -443,13 +444,13 @@ Each one deserves a test.
 
 - Signup accepts only `Student` or `Instructor` as `accountType`. If it accepted `Admin` from
   the client, anyone could make themselves an admin. See
-  [reference/server/utils/validateAuth.js](reference/server/utils/validateAuth.js).
+  [reference/server/utils/validateAuth.js](../reference/server/utils/validateAuth.js).
 - Deletion is soft: `isDeleted = true` and `deletionScheduledAt = now + 3 days`. Logging in
   before then cancels it.
 - A nightly job at 01:00 hard-deletes accounts that are due and writes a `UserDeletionLog`
-  row for each. See [reference/server/jobs/deleteInactiveUsers.js](reference/server/jobs/deleteInactiveUsers.js).
+  row for each. See [reference/server/jobs/deleteInactiveUsers.js](../reference/server/jobs/deleteInactiveUsers.js).
 
-**Payments**, in [reference/server/controllers/Payments.js](reference/server/controllers/Payments.js)
+**Payments**, in [reference/server/controllers/Payments.js](../reference/server/controllers/Payments.js)
 
 - The order amount is the sum of the courses' **database** prices, in paise (rupees × 100).
   Never use an amount sent by the client.
@@ -520,7 +521,7 @@ Each one deserves a test.
 
 5. **CSRF.** DRF views are CSRF-exempt unless you use `SessionAuthentication`, so with cookie
    JWT auth nothing checks CSRF. Port
-   [reference/server/middlewares/verifyOrigin.js](reference/server/middlewares/verifyOrigin.js)
+   [reference/server/middlewares/verifyOrigin.js](../reference/server/middlewares/verifyOrigin.js)
    as Django middleware: for any method other than GET, HEAD or OPTIONS, reject the request
    when it has an `Origin` (or `Referer`) header that isn't in `CORS_ALLOWED_ORIGINS`.
 
