@@ -457,9 +457,13 @@ stretch goal (importing the real Mongo data) as a plain Python script with psyco
 management command:
 
 ```python
+import os
+
 import psycopg
 
-DSN = "postgresql://studysphere:studysphere@localhost:5432/studysphere"
+# The same value as DATABASE_URL in backend/.env. Set it in the shell first:
+#   $env:DATABASE_URL = "postgresql://studysphere:<password>@localhost:5432/studysphere"
+DSN = os.environ["DATABASE_URL"]
 
 with psycopg.connect(DSN) as conn:  # commits on success, rolls back on an exception
     with conn.cursor() as cur:

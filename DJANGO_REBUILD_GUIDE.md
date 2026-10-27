@@ -33,6 +33,8 @@ edtech-full-python/
 ├── DJANGO_REBUILD_GUIDE.md   ← this file: what to build
 ├── DJANGO_LEARNING_PATH.md   ← what to learn, and in what order
 ├── POSTGRES_PRACTICE.md      ← SQL exercises for each build step
+├── docker-compose.yml        ← Postgres for local development
+├── .env.example              ← its credentials; copy to .env (gitignored)
 ├── frontend/                 ← React app, copied from the MERN repo
 │   └── .env                  ← VITE_BASE_URL=http://localhost:8000/api/v1
 ├── backend/                  ← the Django project (you create it in step 1)
@@ -104,18 +106,19 @@ instead. Delete `reference/` once the port is done.
 
 ### Postgres in Docker
 
-Create `docker-compose.yml` at the repo root:
+`docker-compose.yml` at the repo root reads its credentials from a root `.env` file, which
+Docker Compose loads automatically:
 
 ```yaml
 services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: studysphere
-      POSTGRES_USER: studysphere
-      POSTGRES_PASSWORD: studysphere
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -123,9 +126,41 @@ volumes:
   pgdata:
 ```
 
+`127.0.0.1:` keeps the database reachable from your machine only. Without it, Docker listens on
+every network interface, so other devices on the same Wi-Fi could reach it.
+
+`.env.example` is committed and `.env` is gitignored. Create your copy, set a real
+`POSTGRES_PASSWORD` in it, then start Postgres:
+
 ```powershell
+Copy-Item .env.example .env
 docker compose up -d
 ```
+
+Everyday commands:
+
+| Command | What it does |
+|---|---|
+| `docker compose up -d` | Start Postgres in the background |
+| `docker compose ps` | Check that it's running |
+| `docker compose logs db` | Show Postgres's logs, e.g. when it won't start |
+| `docker compose down` | Stop it. Your data stays in the `pgdata` volume. |
+| `docker compose down -v` | Stop it **and delete the `pgdata` volume**. Every table and row is gone. |
+
+**When you need `docker compose down -v`:**
+
+- **You changed `POSTGRES_DB`, `POSTGRES_USER` or `POSTGRES_PASSWORD` in `.env`.** Postgres
+  applies them only when it creates the database, which happens the first time the volume is
+  empty. Later changes are ignored, and Django fails to log in with the new password. Run
+  `docker compose down -v`, then `docker compose up -d`.
+- **You want a clean slate,** for example when migrations get into a mess while you're
+  learning.
+
+After either one, run `python manage.py migrate` and `python manage.py createsuperuser` again.
+
+If `up` fails with "port is already allocated", another Postgres is using 5432. Check with
+`docker ps`, and either stop it or change the host side of the mapping (e.g.
+`127.0.0.1:5434:5432`) along with the port in `DATABASE_URL`.
 
 ### The Django project
 
@@ -142,6 +177,11 @@ python manage.py startapp accounts   # User, Profile, OTP, UserDeletionLog → /
 python manage.py startapp courses    # Category, Course, Section, SubSection, Enrollment, progress, reviews
 python manage.py startapp payments   # Razorpay
 ```
+
+Point Django at the same database. In `backend/.env` (gitignored), set
+`DATABASE_URL=postgres://studysphere:<your-password>@localhost:5432/studysphere`, using the
+values from the root `.env`. Read it in settings with django-environ:
+`DATABASES = {"default": env.db()}`.
 
 **Don't run `migrate` until the custom User model exists** ([Gotcha 1](#8-gotchas)).
 
