@@ -38,6 +38,7 @@ edtech-full-python/
 ├── frontend/                 ← React app, copied from the MERN repo
 │   └── .env                  ← VITE_BASE_URL=http://localhost:8000/api/v1
 ├── backend/                  ← the Django project (you create it in step 1)
+│   └── .env.example          ← SECRET_KEY, DATABASE_URL; copy to .env (gitignored)
 └── reference/                ← read-only copy of the original, to port from
     ├── server/               ← the Express API (no node_modules, no .env)
     ├── docs/                 ← MERN-era plans: PLATFORM_PLAN*, SMS_OTP_PLAN
@@ -188,10 +189,41 @@ Write `requirements.txt` with `Out-File -Encoding utf8`, not `>`. In Windows Pow
 saves the file as UTF-16, which git treats as binary. Re-run that line whenever you install a
 new package.
 
-Point Django at the same database. In `backend/.env` (gitignored), set
-`DATABASE_URL=postgres://studysphere:<your-password>@localhost:5432/studysphere`, using the
-values from the root `.env`. Read it in settings with django-environ:
-`DATABASES = {"default": env.db()}`.
+**Move `SECRET_KEY` out of `settings.py` before your first commit.** `startproject`
+hard-codes one there, and anything you commit stays in git history even after you delete it.
+In `backend\`, create `.env.example` in VS Code with one line, `SECRET_KEY=` (the name, no
+value), and commit it. Then make your private copy and generate a key:
+
+```powershell
+Copy-Item .env.example .env
+python -c "import secrets; print(secrets.token_urlsafe(50))"   # paste it after SECRET_KEY= in .env
+```
+
+Don't write these files with `Out-File`. Windows PowerShell puts a byte order mark (BOM) at the
+start of UTF-8 files, and django-environ then skips the first line, so `SECRET_KEY` goes
+missing.
+
+Read the key at the top of `config/settings.py`:
+
+```python
+import environ
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / ".env")
+
+SECRET_KEY = env("SECRET_KEY")
+```
+
+If the key is missing, `env("SECRET_KEY")` stops Django with `ImproperlyConfigured` instead of
+letting it run without one. In production, set a fresh key in the host's environment variables.
+Never reuse the one from your local `.env`.
+
+Point Django at the same database. Add
+`DATABASE_URL=postgres://studysphere:<your-password>@localhost:5432/studysphere` to
+`backend/.env` (and `DATABASE_URL=` to `.env.example`), using the values from the root `.env`.
+Read it with the same `env` object: `DATABASES = {"default": env.db()}`.
 
 **Don't run `migrate` until the custom User model exists** ([Gotcha 1](#8-gotchas)).
 
