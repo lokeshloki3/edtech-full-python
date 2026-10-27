@@ -165,18 +165,28 @@ If `up` fails with "port is already allocated", another Postgres is using 5432. 
 ### The Django project
 
 ```powershell
-mkdir backend; cd backend
-python -m venv .venv
+mkdir backend; cd backend          # run everything below from backend\, not the repo root
+python -m venv --upgrade-deps .venv
 .venv\Scripts\Activate.ps1
-pip install django djangorestframework "psycopg[binary]" django-cors-headers PyJWT django-environ cloudinary razorpay
-pip freeze > requirements.txt
+python -m pip install django djangorestframework "psycopg[binary]" django-cors-headers PyJWT django-environ cloudinary razorpay
+python -m pip freeze | Out-File -Encoding utf8 requirements.txt      # python -m pip freeze > requirements.txt
 
-django-admin startproject config .
+python -m django startproject config .
 python manage.py startapp core       # base model, envelope, auth class, middleware, contact form
 python manage.py startapp accounts   # User, Profile, OTP, UserDeletionLog → /auth, /profile
 python manage.py startapp courses    # Category, Course, Section, SubSection, Enrollment, progress, reviews
 python manage.py startapp payments   # Razorpay
 ```
+
+Run pip and Django as `python -m pip` and `python -m django`, not `pip` and `django-admin`.
+On Windows 11 with Smart App Control on, the unsigned `.exe` launchers in `.venv\Scripts` get
+blocked ("An Application Control policy has blocked this file"), but the signed `python.exe`
+doesn't. `--upgrade-deps` gives the new venv the latest pip, so you don't get the "new release
+of pip is available" notice.
+
+Write `requirements.txt` with `Out-File -Encoding utf8`, not `>`. In Windows PowerShell, `>`
+saves the file as UTF-16, which git treats as binary. Re-run that line whenever you install a
+new package.
 
 Point Django at the same database. In `backend/.env` (gitignored), set
 `DATABASE_URL=postgres://studysphere:<your-password>@localhost:5432/studysphere`, using the
