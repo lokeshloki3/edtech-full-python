@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit)"
+    ]
+  },
+  "env": {
+    "GITHUB_MCP_TOKEN": "ghp_your_github_personal_access_token"
+  }
+}
