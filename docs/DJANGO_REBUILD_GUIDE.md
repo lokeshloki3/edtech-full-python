@@ -13,6 +13,8 @@ Related docs:
 - [DJANGO_LEARNING_PATH.md](DJANGO_LEARNING_PATH.md): what to learn before, during and after
   this rebuild, and why Django comes before FastAPI
 - [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md): SQL exercises to do after each build step
+- [NEXTJS_MIGRATION_PLAN.md](NEXTJS_MIGRATION_PLAN.md): the later move from React to Next.js,
+  with the types → zod → services → hooks → BFF route layering
 
 1. [Repo layout](#1-repo-layout)
 2. [Why rebuild the same app](#2-why-rebuild-the-same-app)
@@ -31,9 +33,10 @@ Related docs:
 ```
 edtech-full-python/
 ├── docs/
-│   ├── DJANGO_REBUILD_GUIDE.md ← this file: what to build
-│   ├── DJANGO_LEARNING_PATH.md ← what to learn, and in what order
-│   └── POSTGRES_PRACTICE.md    ← SQL exercises for each build step
+│   ├── DJANGO_REBUILD_GUIDE.md  ← this file: what to build
+│   ├── DJANGO_LEARNING_PATH.md  ← what to learn, and in what order
+│   ├── POSTGRES_PRACTICE.md     ← SQL exercises for each build step
+│   └── NEXTJS_MIGRATION_PLAN.md ← later: React → Next.js with a BFF layer
 ├── docker-compose.yml        ← Postgres for local development
 ├── .env.example              ← its credentials; copy to .env (gitignored)
 ├── frontend/                 ← React app, copied from the MERN repo
