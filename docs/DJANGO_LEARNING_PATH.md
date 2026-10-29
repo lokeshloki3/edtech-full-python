@@ -161,19 +161,61 @@ them.
 
 ## 4. Stage 3: The rebuild
 
-Follow the build order in [DJANGO_REBUILD_GUIDE.md](DJANGO_REBUILD_GUIDE.md#9-build-order),
-doing the matching exercises in [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md) after each step.
+Follow the build order in [DJANGO_REBUILD_GUIDE.md](DJANGO_REBUILD_GUIDE.md#9-build-order).
+Read the docs listed below before each step, and do the matching exercises in
+[POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md) after it.
 
 Set up the tooling companies use in step 1, so it's a habit before the code grows:
 
 - **ruff** for linting and formatting. It replaces flake8, isort and black.
+  <https://docs.astral.sh/ruff/>
 - **pytest + pytest-django**, with a test for every rule in section 7 of the guide.
-- **pre-commit**, to run ruff before every commit.
+  <https://pytest-django.readthedocs.io/en/latest/>
+- **pre-commit**, to run ruff before every commit. <https://pre-commit.com/>
 - Optional: **uv** instead of `pip` + `venv` (faster, with a lockfile), and **mypy** or
   **pyright** with `django-stubs` for type checking.
 
 With git flow: one `feature/*` branch per build step, merged into `develop` once its "done
 when" check passes.
+
+### Before step 1: Foundation
+
+Read these in order. Do the first two before your first `migrate`.
+
+1. **Connecting to Postgres.** The guide's [Django project](DJANGO_REBUILD_GUIDE.md#the-django-project)
+   section covers `DATABASE_URL` and `env.db()`. Also add `accounts`, `courses`, `payments`
+   and `django.contrib.postgres` to `INSTALLED_APPS`; `ArrayField` needs the last one.
+   - <https://django-environ.readthedocs.io/en/latest/>
+   - <https://docs.djangoproject.com/en/stable/ref/databases/#postgresql-notes>
+2. **The custom User model** ([Gotcha 1](DJANGO_REBUILD_GUIDE.md#8-gotchas)):
+   `AbstractBaseUser`, `PermissionsMixin`, `BaseUserManager` and `AUTH_USER_MODEL`. The
+   "A full example" section of this page is the one to follow.
+   - <https://docs.djangoproject.com/en/stable/topics/auth/customizing/#substituting-a-custom-user-model>
+3. **The UUID base model** ([Primary keys](DJANGO_REBUILD_GUIDE.md#primary-keys)):
+   - <https://docs.djangoproject.com/en/stable/topics/db/models/#abstract-base-classes>
+   - <https://docs.djangoproject.com/en/stable/ref/models/fields/#uuidfield>
+4. **Fields and relations** ([Field types](DJANGO_REBUILD_GUIDE.md#field-types) and
+   [Models](DJANGO_REBUILD_GUIDE.md#models)): `ForeignKey` vs `OneToOneField` vs
+   `ManyToManyField`, `on_delete`, `related_name`, `TextChoices` and `ArrayField`.
+   - <https://docs.djangoproject.com/en/stable/topics/db/models/>
+   - <https://docs.djangoproject.com/en/stable/ref/models/fields/>
+   - <https://docs.djangoproject.com/en/stable/ref/models/fields/#enumeration-types>
+   - <https://docs.djangoproject.com/en/stable/ref/contrib/postgres/fields/#arrayfield>
+5. **Constraints:** `UniqueConstraint` and `CheckConstraint`. Since Django 6.0,
+   `CheckConstraint` takes `condition=`. Older tutorials pass `check=`, which no longer works.
+   - <https://docs.djangoproject.com/en/stable/ref/models/constraints/>
+6. **Migrations:** `makemigrations`, `migrate` and `sqlmigrate`. To read the SQL they run,
+   see [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md#see-the-sql-django-writes).
+   - <https://docs.djangoproject.com/en/stable/topics/migrations/>
+7. **The admin:** `ModelAdmin`, `TabularInline`, and `UserAdmin` for the custom user. Inlines
+   don't nest, so put sections inline on the Course page and subsections inline on the
+   Section page.
+   - <https://docs.djangoproject.com/en/stable/ref/contrib/admin/>
+   - <https://docs.djangoproject.com/en/stable/ref/contrib/admin/#inlinemodeladmin-objects>
+   - <https://docs.djangoproject.com/en/stable/topics/auth/customizing/#custom-users-and-django-contrib-admin>
+8. **The tooling above:** ruff, pytest-django and pre-commit.
+9. **Checking it in psql:** [Open psql](POSTGRES_PRACTICE.md#open-psql), then do the
+   [after step 1](POSTGRES_PRACTICE.md#after-step-1-read-the-schema-then-break-it) exercises.
 
 ---
 
