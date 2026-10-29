@@ -26,6 +26,9 @@ dist/
 .env.*
 !.env.example
 
+# Claude Code: personal settings stay local
+.claude/settings.local.json
+
 # Editors / OS
 .vscode/*
 !.vscode/extensions.json

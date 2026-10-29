@@ -6,7 +6,15 @@ unchanged.
 
 The original MERN repo (`D:\Tech\edtech-full-new`) stays untouched. It is the spec. When
 you're unsure what an endpoint should do, read its Express version in
-[reference/server/](reference/server/), or run both backends and compare.
+[reference/server/](../reference/server/), or run both backends and compare.
+
+Related docs:
+
+- [DJANGO_LEARNING_PATH.md](DJANGO_LEARNING_PATH.md): what to learn before, during and after
+  this rebuild, and why Django comes before FastAPI
+- [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md): SQL exercises to do after each build step
+- [NEXTJS_MIGRATION_PLAN.md](NEXTJS_MIGRATION_PLAN.md): the later move from React to Next.js,
+  with the types → zod → services → hooks → BFF route layering
 
 1. [Repo layout](#1-repo-layout)
 2. [Why rebuild the same app](#2-why-rebuild-the-same-app)
@@ -24,10 +32,17 @@ you're unsure what an endpoint should do, read its Express version in
 
 ```
 edtech-full-python/
-├── DJANGO_REBUILD_GUIDE.md   ← this file
+├── docs/
+│   ├── DJANGO_REBUILD_GUIDE.md  ← this file: what to build
+│   ├── DJANGO_LEARNING_PATH.md  ← what to learn, and in what order
+│   ├── POSTGRES_PRACTICE.md     ← SQL exercises for each build step
+│   └── NEXTJS_MIGRATION_PLAN.md ← later: React → Next.js with a BFF layer
+├── docker-compose.yml        ← Postgres for local development
+├── .env.example              ← its credentials; copy to .env (gitignored)
 ├── frontend/                 ← React app, copied from the MERN repo
 │   └── .env                  ← VITE_BASE_URL=http://localhost:8000/api/v1
 ├── backend/                  ← the Django project (you create it in step 1)
+│   └── .env.example          ← SECRET_KEY, DATABASE_URL; copy to .env (gitignored)
 └── reference/                ← read-only copy of the original, to port from
     ├── server/               ← the Express API (no node_modules, no .env)
     ├── docs/                 ← MERN-era plans: PLATFORM_PLAN*, SMS_OTP_PLAN
@@ -54,7 +69,7 @@ instead. Delete `reference/` once the port is done.
   fixed in PR #31 of the original repo (payment, auth, course access). Your Django version
   is done when it gets those right too.
 - **The frontend already exists.** It reads its API address from `VITE_BASE_URL`
-  ([frontend/src/lib/axiosClient.ts](frontend/src/lib/axiosClient.ts)), so you can test end
+  ([frontend/src/lib/axiosClient.ts](../frontend/src/lib/axiosClient.ts)), so you can test end
   to end from the first endpoint.
 - **The data model shows what Postgres does better.** The Mongoose models keep reference
   arrays on both sides of a relationship and sync them by hand. Translating them is most of
@@ -96,18 +111,19 @@ instead. Delete `reference/` once the port is done.
 
 ### Postgres in Docker
 
-Create `docker-compose.yml` at the repo root:
+`docker-compose.yml` at the repo root reads its credentials from a root `.env` file, which
+Docker Compose loads automatically:
 
 ```yaml
 services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: studysphere
-      POSTGRES_USER: studysphere
-      POSTGRES_PASSWORD: studysphere
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -115,25 +131,103 @@ volumes:
   pgdata:
 ```
 
+`127.0.0.1:` keeps the database reachable from your machine only. Without it, Docker listens on
+every network interface, so other devices on the same Wi-Fi could reach it.
+
+`.env.example` is committed and `.env` is gitignored. Create your copy, set a real
+`POSTGRES_PASSWORD` in it, then start Postgres:
+
 ```powershell
+Copy-Item .env.example .env
 docker compose up -d
 ```
+
+Everyday commands:
+
+| Command | What it does |
+|---|---|
+| `docker compose up -d` | Start Postgres in the background |
+| `docker compose ps` | Check that it's running |
+| `docker compose logs db` | Show Postgres's logs, e.g. when it won't start |
+| `docker compose down` | Stop it. Your data stays in the `pgdata` volume. |
+| `docker compose down -v` | Stop it **and delete the `pgdata` volume**. Every table and row is gone. |
+
+**When you need `docker compose down -v`:**
+
+- **You changed `POSTGRES_DB`, `POSTGRES_USER` or `POSTGRES_PASSWORD` in `.env`.** Postgres
+  applies them only when it creates the database, which happens the first time the volume is
+  empty. Later changes are ignored, and Django fails to log in with the new password. Run
+  `docker compose down -v`, then `docker compose up -d`.
+- **You want a clean slate,** for example when migrations get into a mess while you're
+  learning.
+
+After either one, run `python manage.py migrate` and `python manage.py createsuperuser` again.
+
+If `up` fails with "port is already allocated", another Postgres is using 5432. Check with
+`docker ps`, and either stop it or change the host side of the mapping (e.g.
+`127.0.0.1:5434:5432`) along with the port in `DATABASE_URL`.
 
 ### The Django project
 
 ```powershell
-mkdir backend; cd backend
-python -m venv .venv
+mkdir backend; cd backend          # run everything below from backend\, not the repo root
+python -m venv --upgrade-deps .venv
 .venv\Scripts\Activate.ps1
-pip install django djangorestframework "psycopg[binary]" django-cors-headers PyJWT django-environ cloudinary razorpay
-pip freeze > requirements.txt
+python -m pip install django djangorestframework "psycopg[binary]" django-cors-headers PyJWT django-environ cloudinary razorpay
+python -m pip freeze | Out-File -Encoding utf8 requirements.txt      # python -m pip freeze > requirements.txt
 
-django-admin startproject config .
+python -m django startproject config .
 python manage.py startapp core       # base model, envelope, auth class, middleware, contact form
 python manage.py startapp accounts   # User, Profile, OTP, UserDeletionLog → /auth, /profile
 python manage.py startapp courses    # Category, Course, Section, SubSection, Enrollment, progress, reviews
 python manage.py startapp payments   # Razorpay
 ```
+
+Run pip and Django as `python -m pip` and `python -m django`, not `pip` and `django-admin`.
+On Windows 11 with Smart App Control on, the unsigned `.exe` launchers in `.venv\Scripts` get
+blocked ("An Application Control policy has blocked this file"), but the signed `python.exe`
+doesn't. `--upgrade-deps` gives the new venv the latest pip, so you don't get the "new release
+of pip is available" notice.
+
+Write `requirements.txt` with `Out-File -Encoding utf8`, not `>`. In Windows PowerShell, `>`
+saves the file as UTF-16, which git treats as binary. Re-run that line whenever you install a
+new package.
+
+**Move `SECRET_KEY` out of `settings.py` before your first commit.** `startproject`
+hard-codes one there, and anything you commit stays in git history even after you delete it.
+In `backend\`, create `.env.example` in VS Code with one line, `SECRET_KEY=` (the name, no
+value), and commit it. Then make your private copy and generate a key:
+
+```powershell
+Copy-Item .env.example .env
+python -c "import secrets; print(secrets.token_urlsafe(50))"   # paste it after SECRET_KEY= in .env
+```
+
+Don't write these files with `Out-File`. Windows PowerShell puts a byte order mark (BOM) at the
+start of UTF-8 files, and django-environ then skips the first line, so `SECRET_KEY` goes
+missing.
+
+Read the key at the top of `config/settings.py`:
+
+```python
+import environ
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / ".env")
+
+SECRET_KEY = env("SECRET_KEY")
+```
+
+If the key is missing, `env("SECRET_KEY")` stops Django with `ImproperlyConfigured` instead of
+letting it run without one. In production, set a fresh key in the host's environment variables.
+Never reuse the one from your local `.env`.
+
+Point Django at the same database. Add
+`DATABASE_URL=postgres://studysphere:<your-password>@localhost:5432/studysphere` to
+`backend/.env` (and `DATABASE_URL=` to `.env.example`), using the values from the root `.env`.
+Read it with the same `env` object: `DATABASES = {"default": env.db()}`.
 
 **Don't run `migrate` until the custom User model exists** ([Gotcha 1](#8-gotchas)).
 
@@ -169,7 +263,7 @@ slash**. Match them exactly.
 `{ "success": false, "message": "..." }`, with a matching status code. The frontend checks
 `success` before reading `data`.
 
-The exact shape of every endpoint's response is in [frontend/src/types/](frontend/src/types/).
+The exact shape of every endpoint's response is in [frontend/src/types/](../frontend/src/types/).
 Shapes differ by endpoint. For example, `getAllCourses` returns a six-field projection, and
 most endpoints send `instructor` as an id rather than an object. Read the type before
 writing the serializer.
@@ -199,7 +293,7 @@ writing the serializer.
 Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 **Student / Instructor / Admin** (that `accountType` only).
 
-**`/api/v1/auth`**, from [reference/server/routes/User.js](reference/server/routes/User.js)
+**`/api/v1/auth`**, from [reference/server/routes/User.js](../reference/server/routes/User.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -211,7 +305,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | POST | `/reset-password-token` | Public | Emails a reset link. 3 per hour per IP + email. |
 | POST | `/reset-password` | Public | |
 
-**`/api/v1/profile`**, from [reference/server/routes/Profile.js](reference/server/routes/Profile.js)
+**`/api/v1/profile`**, from [reference/server/routes/Profile.js](../reference/server/routes/Profile.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -222,7 +316,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | GET | `/instructorDashboard` | Instructor | Per course: `totalStudentsEnrolled`, `totalAmountGenerated` (students × price) |
 | DELETE | `/deleteProfile` | Auth | Soft delete. Hard delete follows after 3 days. |
 
-**`/api/v1/course`**, from [reference/server/routes/Course.js](reference/server/routes/Course.js)
+**`/api/v1/course`**, from [reference/server/routes/Course.js](../reference/server/routes/Course.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -247,7 +341,7 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 | GET | `/getAverageRating` | Public | |
 | GET | `/getReviews` | Public | Populates the author and the course name |
 
-**`/api/v1/payment`**, from [reference/server/routes/Payments.js](reference/server/routes/Payments.js)
+**`/api/v1/payment`**, from [reference/server/routes/Payments.js](../reference/server/routes/Payments.js)
 
 | Method | Path | Who | Notes |
 |---|---|---|---|
@@ -261,14 +355,14 @@ Who can call it: **Public** (no login), **Auth** (any logged-in user), or
 |---|---|---|---|
 | POST | `/contact` | Public | Replies **200 even on failure**. The frontend reads `success`. |
 
-Express also serves `GET /`, which returns `{ success: true, message: "Your server is up and running." }`,
-and `GET /robots.txt`.
+Express also serves `GET /`, which returns `{ success: true, message: "Your server is up and running." }`.
+Don't give the API a `robots.txt`; see the robots rule in [section 7](#7-behaviour-to-carry-over).
 
 ---
 
 ## 6. Data model: Mongo → Postgres
 
-The originals are in [reference/server/models/](reference/server/models/).
+The originals are in [reference/server/models/](../reference/server/models/).
 
 ### Field types
 
@@ -322,7 +416,7 @@ let anyone enumerate `/courses/1`, `/courses/2` and so on.
 These are the rules the Express code enforces today. Several came from the PR #31 fixes.
 Each one deserves a test.
 
-**Session**, in [reference/server/config/authCookie.js](reference/server/config/authCookie.js)
+**Session**, in [reference/server/config/authCookie.js](../reference/server/config/authCookie.js)
 
 - The cookie is named `token`: httpOnly, path `/`, lasting 2 hours. In dev: `SameSite=Lax`,
   not secure. In production: `SameSite=None; Secure`, because the frontend and the API are
@@ -337,12 +431,12 @@ Each one deserves a test.
 
 - The OTP is stored hashed, never in plaintext. It expires after 5 minutes. After 5 wrong
   attempts the user must request a new one. See
-  [reference/server/models/OTP.js](reference/server/models/OTP.js).
+  [reference/server/models/OTP.js](../reference/server/models/OTP.js).
 - Only the SHA-256 hash of the reset token is stored on the user, and it expires after 5
-  minutes. See [reference/server/controllers/ResetPassword.js](reference/server/controllers/ResetPassword.js).
+  minutes. See [reference/server/controllers/ResetPassword.js](../reference/server/controllers/ResetPassword.js).
 - Emails are trimmed and lowercased everywhere, and `User.email` is unique.
 
-**Rate limits**, in [reference/server/middlewares/rateLimit.js](reference/server/middlewares/rateLimit.js)
+**Rate limits**, in [reference/server/middlewares/rateLimit.js](../reference/server/middlewares/rateLimit.js)
 
 - Login allows 5 failed attempts per 15 minutes per IP. Successful logins don't count.
 - `sendotp` and `reset-password-token` allow 3 per hour, keyed on IP + target email.
@@ -351,12 +445,15 @@ Each one deserves a test.
 
 **Accounts**
 
+- Signup accepts only `Student` or `Instructor` as `accountType`. If it accepted `Admin` from
+  the client, anyone could make themselves an admin. See
+  [reference/server/utils/validateAuth.js](../reference/server/utils/validateAuth.js).
 - Deletion is soft: `isDeleted = true` and `deletionScheduledAt = now + 3 days`. Logging in
   before then cancels it.
 - A nightly job at 01:00 hard-deletes accounts that are due and writes a `UserDeletionLog`
-  row for each. See [reference/server/jobs/deleteInactiveUsers.js](reference/server/jobs/deleteInactiveUsers.js).
+  row for each. See [reference/server/jobs/deleteInactiveUsers.js](../reference/server/jobs/deleteInactiveUsers.js).
 
-**Payments**, in [reference/server/controllers/Payments.js](reference/server/controllers/Payments.js)
+**Payments**, in [reference/server/controllers/Payments.js](../reference/server/controllers/Payments.js)
 
 - The order amount is the sum of the courses' **database** prices, in paise (rupees × 100).
   Never use an amount sent by the client.
@@ -368,8 +465,12 @@ Each one deserves a test.
 **Misc**
 
 - The contact form replies 200 even when it fails.
-- Every response carries `X-Robots-Tag: noindex, nofollow`, and `/robots.txt` disallows
-  everything. The API should never be indexed.
+- Every response carries `X-Robots-Tag: noindex, nofollow`, so API URLs never show up as search
+  results. Done in `core` by `RobotsTagMiddleware`.
+- **The API has no `robots.txt`.** Google renders the client-side catalog and course pages by
+  calling this API, and it obeys the API host's `robots.txt` while doing so. A `Disallow: /`
+  would leave those pages empty for Google. Whether the site itself is indexable is the
+  frontend's `VITE_STAGING`.
 
 ---
 
@@ -427,7 +528,7 @@ Each one deserves a test.
 
 5. **CSRF.** DRF views are CSRF-exempt unless you use `SessionAuthentication`, so with cookie
    JWT auth nothing checks CSRF. Port
-   [reference/server/middlewares/verifyOrigin.js](reference/server/middlewares/verifyOrigin.js)
+   [reference/server/middlewares/verifyOrigin.js](../reference/server/middlewares/verifyOrigin.js)
    as Django middleware: for any method other than GET, HEAD or OPTIONS, reject the request
    when it has an `Origin` (or `Referer`) header that isn't in `CORS_ALLOWED_ORIGINS`.
 
@@ -474,12 +575,13 @@ Each one deserves a test.
 
 ## 9. Build order
 
-Each step leaves something working you can click through in the frontend.
+Each step leaves something working you can click through in the frontend. After each step, do
+the matching exercises in [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md).
 
 | # | Step | Endpoints | Done when | You learn |
 |---|---|---|---|---|
 | 1 | Foundation | none | You can create a category, and a course with sections and subsections, in `/admin`, and see the rows in `psql` | Models, migrations, constraints, the admin |
-| 2 | Plumbing | `GET /`, `/robots.txt` | The envelope, error handler, cookie auth class, CORS, origin middleware and robots header are all in place | DRF settings, middleware |
+| 2 | Plumbing | `GET /` | The envelope, error handler, cookie auth class, CORS, origin middleware and robots header are all in place | DRF settings, middleware |
 | 3 | Public reads | `showAllCategories`, `getCategoryPageDetails`, `getAllCourses`, `getCourseDetails`, `getReviews`, `getAverageRating` | The home, catalog and course pages render from Postgres | Serializers, `select_related` / `prefetch_related`, `Avg` |
 | 4 | Auth | All of `/auth`, plus `getUserDetails` | Sign up with an OTP, log in, reload and stay logged in, log out. A 6th wrong password gets a 429. | The custom user, hashing, cookies, PyJWT, email, throttling |
 | 5 | Instructor | Course, section and subsection CRUD, `getInstructorCourses`, `getFullCourseDetails`, `deleteCourse`, `updateProfile`, `updateDisplayPicture`, `instructorDashboard` | You can build and publish a course in the UI, with a thumbnail and videos | Multipart, Cloudinary, permissions, `annotate` with `Count` and `F` |
@@ -496,4 +598,6 @@ bugs the Express version already hit.
 **Stretch goal.** Write a management command that imports the real data from MongoDB
 (`mongoexport` JSON → Postgres), mapping ObjectIds to UUIDs and the two-sided arrays to
 `Enrollment` rows. It teaches `bulk_create` and data migration, the part of a real stack
-switch that tutorials skip.
+switch that tutorials skip. To learn the psycopg driver as well, write it as a plain script
+instead; [POSTGRES_PRACTICE.md](POSTGRES_PRACTICE.md#psycopg-directly-the-data-import) shows
+how.
